@@ -1,3 +1,4 @@
+from sqlite3.dbapi2 import IntegrityError
 import sys
 import re
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -52,7 +53,6 @@ class Setup(QDialog):
 
 #  FUNCION VALIDAR REGEX  DE INPUT IP
 
-
     def validar_ip(self):
         ip = self.ipinput.text()
         validar = re.fullmatch('\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', ip)
@@ -78,6 +78,8 @@ class Setup(QDialog):
         if ((self.indexnameinput.text() != "") and (len(self.dailyvalueinput.text()) > 0) and (self.ipinput.text() != "")
             ):
             self.addbutton.setEnabled(True)
+        else:
+            self.addbutton.setEnabled(False)
 
 ## FUNCION para el Seteo del foco de los inputs en la posición 0 al hacer click##
 
@@ -165,11 +167,13 @@ createtable(con)
 def insertdummyregistry(con):
 
     cursorObj = con.cursor()
+    try:
+        cursorObj.execute(
+            "INSERT INTO indexes (name,ip,dailyavg,retention) VALUES('Openshift','127.000.000.001',2048,15)")
+        con.commit()
 
-    cursorObj.execute(
-        "INSERT OR REPLACE INTO indexes (name,ip,dailyavg,retention) VALUES('Openshift','127.000.000.001',2048,15)")
-
-    con.commit()
+    except IntegrityError:
+        print("El Registro ya existe o no cumple con lo necesario para ser insertado")
 
 
 con = connection()

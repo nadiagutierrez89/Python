@@ -14,6 +14,11 @@ class Setup(QDialog):
         super(Setup, self).__init__()
         mod_path = pathlib.Path(__file__).parent
         loadUi(mod_path / "setup.ui", self)
+# Creación DB
+        createdb()
+        con = connection()
+        createtable(con)
+        select_all_tasks(con)
 
 ##Rutina para el Seteo del foco de los inputs en la posición 0 al hacer click##
         self.indexnameinput.installEventFilter(self)
@@ -25,18 +30,25 @@ class Setup(QDialog):
 # Validar Regex IP
         self.ipinput.textChanged.connect(self.validar_ip)
 
+# BOTON ADD
+        self.addbutton.released.connect(self.agregar_registro)
+
+# BOTON DELETE
+        self.deletebutton.released.connect(self.borrar_registro)
+
 # Mostrar en tabla
-        rowPosition = self.tablaindex.rowCount()
-        self.tablaindex.insertRow(rowPosition)
-        self.tablaindex.insertRow(rowPosition)
-        self.tablaindex.setItem(
-            0, 0, QTableWidgetItem("LALALALA"))
+        # rowPosition = self.tablaindex.rowCount()
+        # self.tablaindex.insertRow(rowPosition)
+        # self.tablaindex.insertRow(rowPosition)
+        # self.tablaindex.setItem(
+        #     0, 0, QTableWidgetItem("LALALALA"))
 
         # for i in range(1, 10, 1):
         #     self.tablaindex.insertRow(i)
         #     for j in range(1, 4, 1):
         #         QTableWidgetItem * item = new QTableWidgetItem(QString("(%1,%2)").arg(i).arg(j))
         #         self.tablaindex.setItem(i, j, item)
+
 #  RELLENAR COMBO DE RETENTION EN MESES
 
         for i in range(1, 18, 1):
@@ -52,6 +64,7 @@ class Setup(QDialog):
 
 
 #  FUNCION VALIDAR REGEX  DE INPUT IP
+
 
     def validar_ip(self):
         ip = self.ipinput.text()
@@ -74,9 +87,10 @@ class Setup(QDialog):
 
 # Funcion BOTON ADD CUANDO LOS CAMPOS ESTAN COMPLETOS
 
+
     def habilitaboton(self):
         if ((self.indexnameinput.text() != "") and (len(self.dailyvalueinput.text()) > 0) and (self.ipinput.text() != "")
-            ):
+                ):
             self.addbutton.setEnabled(True)
         else:
             self.addbutton.setEnabled(False)
@@ -102,10 +116,26 @@ class Setup(QDialog):
             return True
         return super().eventFilter(source, event)
 
+   # Funcion BOTON ADD CUANDO LOS CAMPOS ESTAN COMPLETOS
+
+    def agregar_registro(self):
+        self.addbutton.setStyleSheet("color: red;"
+                                     "background-color:rgb(40, 40, 40);")
+        con = connection()
+        inserta_registro(con, self)
+
+ # Funcion BOTON DELETE
+
+    def borrar_registro(self):
+        self.deletebutton.setStyleSheet("color: yellow;"
+                                        "background-color:rgb(40, 40, 40);")
+        con1 = connection()
+        borra_registro(con1, self)
 
 ##ALE##
 
 # DB - Database creation
+
 
 def createdb():
 
@@ -122,9 +152,6 @@ def createdb():
     finally:
 
         con.close()
-
-
-createdb()
 
 
 # DB - Table creation and check
@@ -157,28 +184,45 @@ def createtable(con):
     con.commit()
 
 
-con = connection()
-
-createtable(con)
-
-
-# Inserting dummy values as example
-
-def insertdummyregistry(con):
-
+# INSERTA REGISTRO EN BD
+def inserta_registro(con, self):
     cursorObj = con.cursor()
+    self.resultadotext.setStyleSheet("color: white;"
+                                     "background-color:rgb(40, 40, 40);")
     try:
         cursorObj.execute(
-            "INSERT INTO indexes (name,ip,dailyavg,retention) VALUES('Openshift','127.000.000.001',2048,15)")
+            "INSERT INTO indexes (name,ip,dailyavg,retention) VALUES(?,?,?,?)",
+            (self.indexnameinput.text(), self.ipinput.text(), self.dailyvalueinput.text(),
+             int(self.retentioncombo.currentText())))
         con.commit()
+        con.close()
+        self.resultadotext.setPlainText("Se guardo correctamente el index")
+        self.addbutton.setStyleSheet("color: green;")
 
     except IntegrityError:
         print("El Registro ya existe o no cumple con lo necesario para ser insertado")
+        con.close()
+        self.resultadotext.setPlainText(
+            "El index ya existe o no cumple con lo necesario para ser insertado ")
 
 
-con = connection()
+# BORRA REGISTRO EN BD
+def borra_registro(con, self):
+    cursorObj = con.cursor()
+    self.resultadotext.setStyleSheet("color: white;"
+                                     "background-color:rgb(40, 40, 40);")
+    try:
+        cursorObj.execute(
+            "DELETE FROM indexes WHERE name = ?", ((self.indexqueryinput.text()),))
+        con.commit()
+        con.close()
+        self.resultadotext.setPlainText("Se elimino correctamente el index")
+        self.deletebutton.setStyleSheet("color: green;")
 
-insertdummyregistry(con)
+    except IntegrityError:
+        con.close()
+        self.resultadotext.setPlainText(
+            "El index no pudo eliminarse, verificar el nombre ")
 
 
 def select_all_tasks(conn):
@@ -195,8 +239,6 @@ def select_all_tasks(conn):
     for row in rows:
         print(row)
 
-
-select_all_tasks(con)
 
 app = QApplication(sys.argv)
 mainwindow = Setup()
