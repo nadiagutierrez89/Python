@@ -78,6 +78,8 @@ class Setup(QDialog):
         if ((self.indexnameinput.text() != "") and (len(self.dailyvalueinput.text()) > 0) and (self.ipinput.text() != "")
             ):
             self.addbutton.setEnabled(True)
+        else:
+            self.addbutton.setEnabled(False)
 
 ## FUNCION para el Seteo del foco de los inputs en la posición 0 al hacer click##
 
